@@ -1,0 +1,143 @@
+# ovpnkeys.py openssl configuration.
+#
+# Phil's work is an excellent reference
+# https://www.phildev.net/ssl/
+# So is the redhat docs
+# https://access.redhat.com/documentation/en-us/red_hat_certificate_system/9/html/administration_guide/standard_x.509_v3_certificate_extensions
+#-----------------------------------------------------------------------------------------
+# Top-level 'default' section.
+HOME = .
+
+#-----------------------------------------------------------------------------------------
+# The `ca` command will read from here. This mainly maps to a configuration section.
+#  `default_ca` can be overridden by a commandline argument.
+[ ca ]
+default_ca = my_ca_default
+
+#-----------------------------------------------------------------------------------------
+# https://www.openssl.org/docs/man1.1.1/man1/openssl-ca.html
+[ my_ca_default ]
+dir             = $ENV::OVPNKEYS_CA      # Where everything is kept.
+new_certs_dir   = $dir/certsdb           # Where certificates will be stored.
+database        = $dir/index.txt         # Certificate index flatfile.
+certificate     = $dir/pub/root.crt      # The CA certificate
+private_key     = $dir/private/root.pem  # The private key
+serial          = $dir/serial            # The current serial number
+
+crldir          = $dir/crl
+crlnumber       = $dir/crlnumber        # the current crl number
+crl             = $crldir/crl.pem       # The current CRL
+
+# Honor extensions requested of us
+copy_extensions	= copy
+
+# Display format when confirming signing.
+name_opt        = ca_default            # Subject Name options
+cert_opt        = ca_default            # Certificate field options
+
+default_days    = 365                   # How long to certify clients for.
+default_md      = sha1                  # which md to use.
+preserve        = no                    # keep passed DN ordering
+
+# The CRL should be refreshed regularly. If there is an issue with clients accessing the 
+#  CRL, then this is a grace period to fix that issue.
+# If clients cannot access the CRL for 30 days, then they will start rejecting the 
+# certificates.
+default_crl_days = 30
+
+policy = my_default_policy
+
+#-----------------------------------------------------------------------------------------
+# Basic input policy that just requires a CN.
+[ my_default_policy ]
+countryName             = optional
+stateOrProvinceName     = optional
+organizationName        = optional
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+#-----------------------------------------------------------------------------------------
+# This is where we define how to generate CSRs, for the `req` command.
+[ req ]
+default_bits        = 2048
+default_keyfile     = privkey.pem
+distinguished_name  = my_req_distinguished_name # Definition for DN input.
+attributes          = my_req_attributes         # CSR attributes (unused).
+req_extensions		= my_v3_req                 # The extensions to add to CSRs.
+
+# Strings should not be multibyte - best compatibility.
+string_mask = nombstr
+
+#-----------------------------------------------------------------------------------------
+# This configures the distinguished name (DN) prompts when you are requesting a CSR.
+[ my_req_distinguished_name ]
+countryName            = Country Name (2 letter code)
+countryName_default    = US
+countryName_min        = 2
+countryName_max        = 2
+
+stateOrProvinceName    = State or Province Name (full name)
+localityName           = Locality Name (eg, city)
+0.organizationName     = Organization Name (eg, company)
+organizationalUnitName = Organizational Unit Name (eg, section)
+
+commonName             = Common Name (eg, YOUR name)
+commonName_max         = 64
+
+emailAddress           = Email Address
+emailAddress_max       = 64
+
+#-----------------------------------------------------------------------------------------
+# Unused but mandatory section for CSR attributes.
+[ my_req_attributes ]
+
+#-----------------------------------------------------------------------------------------
+# Extension for requests
+[ my_v3_req ]
+# PKIX compliance
+# https://stackoverflow.com/questions/17172239/on-certificates-what-type-should-e-mail-addresses-be-when-in-subjectaltname
+subjectAltName = email:move
+
+#-----------------------------------------------------------------------------------------
+# Extensions for signing CA certificates.
+[ my_v3_ca_exts ]
+# PKIX recommends this for CA but not for end-entities. It should be critical.
+basicConstraints        = critical,CA:true
+subjectKeyIdentifier    = hash
+authorityKeyIdentifier  = keyid:always,issuer:always
+keyUsage                = cRLSign, keyCertSign
+
+#-----------------------------------------------------------------------------------------
+# Extensions for signing VPN server certificates.
+[ my_vpn_server_exts ]
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer:always
+
+# OpenVPN will complain if the key usage isn't correct. If these are not critical, they
+#  are advisories rather than mandates.
+extendedKeyUsage       = serverAuth
+# PKIX recommends critical keyUsage, if used.
+keyUsage               = critical, digitalSignature, keyEncipherment
+
+#-----------------------------------------------------------------------------------------
+# Extensions for signing VPN client certificates.
+[ my_vpn_client_exts ]
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer:always
+extendedKeyUsage       = clientAuth
+keyUsage               = critical, digitalSignature
+
+# Copies of above with the crl extension.
+[ my_vpn_server_exts_crl ]
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer:always
+extendedKeyUsage       = serverAuth
+keyUsage               = critical, digitalSignature, keyEncipherment
+crlDistributionPoints  = $ENV::OVPNKEYS_CRL
+[ my_vpn_client_exts_crl ]
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer:always
+extendedKeyUsage       = clientAuth
+keyUsage               = critical, digitalSignature
+crlDistributionPoints  = $ENV::OVPNKEYS_CRL

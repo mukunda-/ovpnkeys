@@ -1,0 +1,36 @@
+# OpenVPN server configuration file.
+# See OpenVPN/sample-config/server.ovpn for information how to customize this.
+port {{remote_port}}
+proto udp
+dev tun
+ca [inline]
+cert [inline]
+key [inline]
+dh [inline]
+topology subnet
+server 10.8.0.0 255.255.255.0
+ifconfig-pool-persist ipp.txt
+keepalive 10 50
+tls-auth [inline] 0
+cipher AES-256-CBC
+persist-key
+persist-tun
+status openvpn-status.log
+verb 3
+explicit-exit-notify 1
+
+<ca>
+{{cacert}}
+</ca>
+<cert>
+{{cert}}
+</cert>
+<key>
+{{key}}
+</key>
+<tls-auth>
+{{ta}}
+</tls-auth>
+<dh>
+{{dh}}
+</dh>

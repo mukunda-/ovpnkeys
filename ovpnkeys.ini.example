@@ -1,0 +1,28 @@
+[ovpnkeys]
+# Database directory
+dir = db
+
+# Default certificate subject values.
+country             = US
+state               =
+organization        = Example Organization
+organizational_unit =
+email               = admin@example.com
+
+# The common name for the CA
+root_name = Example Root
+
+# How long to certify CA for.
+root_certification_days = 3650
+# How long to certify end certificates for.
+certification_days = 365
+
+# Endpoint where CRL is published to. Uncomment to enable
+#  CRL revocation.
+#crl_url = https://example.com/vpn.crl
+
+# URL that will be called to update the CRL list.
+crl_updater = https://example.com/update_vpn_crl.php
+
+remote_server = vpn.example.com
+remote_port   = 1194
