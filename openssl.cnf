@@ -6,37 +6,46 @@
 # https://access.redhat.com/documentation/en-us/red_hat_certificate_system/9/html/administration_guide/standard_x.509_v3_certificate_extensions
 #-----------------------------------------------------------------------------------------
 # Top-level 'default' section.
+# I'm not too sure what HOME is used for.
 HOME = .
 
 #-----------------------------------------------------------------------------------------
 # The `ca` command will read from here. This mainly maps to a configuration section.
-#  `default_ca` can be overridden by a commandline argument.
+#  `default_ca` can be overridden by a commandline argument, for networks with multiple
+#  CA requirements.
 [ ca ]
 default_ca = my_ca_default
 
 #-----------------------------------------------------------------------------------------
 # https://www.openssl.org/docs/man1.1.1/man1/openssl-ca.html
+# https://www.phildev.net/ssl/opensslconf.html
 [ my_ca_default ]
-dir             = $ENV::OVPNKEYS_CA      # Where everything is kept.
+dir             = $ENV::OVPNKEYS_CA      # Where everything is kept. Environment variable.
 new_certs_dir   = $dir/certsdb           # Where certificates will be stored.
 database        = $dir/index.txt         # Certificate index flatfile.
-certificate     = $dir/pub/root.crt      # The CA certificate
+certificate     = $dir/pub/root.crt      # The CA certificate we're keeping it in the pub
+                                         #  folder like other certs.
 private_key     = $dir/private/root.pem  # The private key
-serial          = $dir/serial            # The current serial number
-
-crldir          = $dir/crl
-crlnumber       = $dir/crlnumber        # the current crl number
+serial          = $dir/serial            # The current serial number. This is generated
+                                         #  during init with -create_serial.
+crldir          = $dir/crl              # Where we will keep our CRL file.
+crlnumber       = $dir/crlnumber        # the current crl number. This contains a
+                                        #  hex-coded serial number, initialized to 1000
+                                        #  manually.
 crl             = $crldir/crl.pem       # The current CRL
 
-# Honor extensions requested of us
+# Honor extensions requested of us. This is a dangerous rule, but since we are doing all
+#  generation (private key, CSR, CRT) on the same site, we don't need to doublecheck the
+#  CSR properties for inappropriate extensions.
 copy_extensions	= copy
 
-# Display format when confirming signing.
+# Display format when confirming signing. This is just cosmetics that controls output to
+# the user.
 name_opt        = ca_default            # Subject Name options
 cert_opt        = ca_default            # Certificate field options
 
 default_days    = 365                   # How long to certify clients for.
-default_md      = sha1                  # which md to use.
+default_md      = sha256                # which message digest to use.
 preserve        = no                    # keep passed DN ordering
 
 # The CRL should be refreshed regularly. If there is an issue with clients accessing the 
@@ -45,6 +54,7 @@ preserve        = no                    # keep passed DN ordering
 # certificates.
 default_crl_days = 30
 
+# Again, since we are doing all generation on the same site, policy hardly matters.
 policy = my_default_policy
 
 #-----------------------------------------------------------------------------------------
@@ -66,7 +76,7 @@ distinguished_name  = my_req_distinguished_name # Definition for DN input.
 attributes          = my_req_attributes         # CSR attributes (unused).
 req_extensions		= my_v3_req                 # The extensions to add to CSRs.
 
-# Strings should not be multibyte - best compatibility.
+# Strings should not be multibyte - best compatibility (but does not allow utf-8).
 string_mask = nombstr
 
 #-----------------------------------------------------------------------------------------
@@ -114,7 +124,7 @@ keyUsage                = cRLSign, keyCertSign
 subjectKeyIdentifier   = hash
 authorityKeyIdentifier = keyid,issuer:always
 
-# OpenVPN will complain if the key usage isn't correct. If these are not critical, they
+# OpenVPN may complain if the key usage isn't correct. If these are not critical, they
 #  are advisories rather than mandates.
 extendedKeyUsage       = serverAuth
 # PKIX recommends critical keyUsage, if used.
@@ -128,7 +138,10 @@ authorityKeyIdentifier = keyid,issuer:always
 extendedKeyUsage       = clientAuth
 keyUsage               = critical, digitalSignature
 
-# Copies of above with the crl extension.
+#-----------------------------------------------------------------------------------------
+# Copies of above with the crlDistributionPoints extension added.
+# Unfortunately, it does not seem possible to add that additional rule at the commandline
+#  or dynamically without having a separate section.
 [ my_vpn_server_exts_crl ]
 subjectKeyIdentifier   = hash
 authorityKeyIdentifier = keyid,issuer:always
