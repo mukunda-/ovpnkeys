@@ -39,6 +39,10 @@ def conf(key, default=None):
       return Config["ovpnkeys"].get(key, default)
 
 #-----------------------------------------------------------------------------------------
+def confb(key, default=False):
+   return Config.getboolean("ovpnkeys", key, fallback=default)
+
+#-----------------------------------------------------------------------------------------
 def printErr(*args, **kwargs):
    print("Error:", *args, **kwargs, file=sys.stderr)
 
@@ -139,6 +143,9 @@ def createCAcert():
            "-config", "./openssl.cnf",
            "-subj", getSubjArg(conf("root_name"), conf("country"), conf("state"),
                                conf("organization"), conf("organizational_unit"), "")]
+   if confb('no_ca_pass'):
+      args += ["-nodes"]
+
    run(args)
 
    print("Self-signing CA.")

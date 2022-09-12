@@ -17,6 +17,9 @@ root_certification_days = 18250
 # How long to certify end certificates for.
 certification_days = 3650
 
+# Don't encrypt the root key password (not recommended, but may make automation easier).
+#no_ca_pass = true
+
 # Endpoint where CRL is published to. Uncomment to enable
 #  CRL revocation.
 #crl_url = https://example.com/vpn.crl
