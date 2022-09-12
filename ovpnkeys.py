@@ -159,7 +159,7 @@ def createTlsAuthKey():
 #-----------------------------------------------------------------------------------------
 def createDHParam():
    print("Generating dhparam.")
-   #run(["openssl", "dhparam", "-out", cdir("private", "dh2048.pem"), "2048"])
+   run(["openssl", "dhparam", "-out", cdir("private", "dh2048.pem"), "2048"])
 
 #-----------------------------------------------------------------------------------------
 def createDbFolders():
