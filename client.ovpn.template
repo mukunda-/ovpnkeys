@@ -1,0 +1,30 @@
+﻿# OpenVPN client configuration file.
+# See OpenVPN/sample-config/client.ovpn for information how to customize this.
+client
+dev tun
+proto udp
+remote {{remote_server}} {{remote_port}}
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+ca [inline]
+cert [inline]
+key [inline]
+remote-cert-tls server
+tls-auth [inline] 1
+cipher AES-256-CBC
+verb 3
+
+<ca>
+{{cacert}}
+</ca>
+<cert>
+{{cert}}
+</cert>
+<key>
+{{key}}
+</key>
+<tls-auth>
+{{ta}}
+</tls-auth>
