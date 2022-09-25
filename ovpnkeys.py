@@ -31,15 +31,17 @@ import os, subprocess, argparse, configparser, sys, re, requests
 Args   = None
 Config = None
 
+class NoDefault: pass
+
 #-----------------------------------------------------------------------------------------
-def conf(key, default=None):
-   if not default:
+def conf(key, default=NoDefault):
+   if default is NoDefault:
       return Config["ovpnkeys"][key]
    else:
       return Config["ovpnkeys"].get(key, default)
 
 #-----------------------------------------------------------------------------------------
-def confb(key, default=False):
+def confb(key, default=NoDefault):
    return Config.getboolean("ovpnkeys", key, fallback=default)
 
 #-----------------------------------------------------------------------------------------
@@ -56,7 +58,7 @@ def loadConfig():
    Config = configparser.ConfigParser()
    Config.read("ovpnkeys.ini")
    os.environ["OVPNKEYS_CA"] = conf("dir")
-   os.environ["OVPNKEYS_CRL"] = conf("crl_url")
+   os.environ["OVPNKEYS_CRL"] = conf("crl_url", "")
 
 #-----------------------------------------------------------------------------------------
 def cdir(*parts):
@@ -74,6 +76,8 @@ def parseArgs():
    parser.add_argument("--org", help="Subject organization.")
    parser.add_argument("--ou", help="Subject organization unit.")
    parser.add_argument("--email", help="Subject email.")
+   parser.add_argument("--nopass", action="store_true",
+      help="Do not password protect generated private key.")
    Args = parser.parse_args()
 
 #-----------------------------------------------------------------------------------------
@@ -143,7 +147,7 @@ def createCAcert():
            "-config", "./openssl.cnf",
            "-subj", getSubjArg(conf("root_name"), conf("country"), conf("state"),
                                conf("organization"), conf("organizational_unit"), "")]
-   if confb('no_ca_pass'):
+   if confb('no_ca_pass') or Args.nopass:
       args += ["-nodes"]
 
    run(args)
@@ -272,6 +276,8 @@ def create(name, ctype):
                   Args.org or conf('organization'),
                   Args.ou or conf('organizational_unit'),
                   Args.email or conf('email'))]
+   if Args.nopass:
+      cmd += ["-nodes"]
    run(cmd)
    
    if ctype == "server":
@@ -282,7 +288,7 @@ def create(name, ctype):
       printErr("Unexpected type.")
       sys.exit(-1)
    
-   if conf('crl_url'):
+   if conf('crl_url', None):
       # Use alternate extension with CRL distribution endpoint if crl_url is specified.
       exts += "_crl"
       os.environ["OVPNKEYS_CRL"] = "URI:" + conf('crl_url')
